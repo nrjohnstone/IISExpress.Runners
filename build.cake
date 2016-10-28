@@ -37,7 +37,7 @@ Task("Restore-NuGet-Packages")
 });
 
 
-Task("Pack")
+Task("Pack-Nuget")
     .Does(() => 
 {
     EnsureDirectoryExists("./artifacts");
