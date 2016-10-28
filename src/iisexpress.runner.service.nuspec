@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata minClientVersion="2.12">
+    <id>iisexpress.runner.service</id>
+    <version>99.99.99-dev</version>
+    <title>IISExpress Service Runner</title>
+    <authors>Nathan Johnstone</authors>
+    <summary>Service runner for IIS Express</summary>
+    <description>Allows a website to be run as a service via IIS Express</description>
+    <language>en-US</language>
+    <!--<projectUrl></projectUrl>-->
+    <!--<iconUrl></iconUrl>-->
+    <!--<licenseUrl></licenseUrl>-->
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <developmentDependency>true</developmentDependency>
+  </metadata>
+  <files>
+    <file src="service\bin\Release\AmbientContext.dll" target="tools\" />
+    <file src="service\bin\Release\AmbientContext.LogService.Serilog.dll" target="tools\" />
+    <file src="service\bin\Release\IISExpressService.exe" target="tools\" />
+    <file src="service\bin\Release\IISExpressService.exe.config" target="tools\" />
+    <file src="service\bin\Release\Serilog.dll" target="tools\" />
+    <file src="service\bin\Release\Serilog.Settings.AppSettings.dll" target="tools\" />
+    <file src="service\bin\Release\Topshelf.dll" target="tools\" />    
+  </files>
+</package>

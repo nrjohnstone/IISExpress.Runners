@@ -43,20 +43,16 @@ Task("Pack")
     EnsureDirectoryExists("./artifacts");
     string version = GitVersion().NuGetVersion;
 
-    var binDir = Directory("./bin") ;
     var nugetPackageDir = Directory("./artifacts");
-
-    var nugetFilePaths = GetFiles("./src/Service/*.csproj");
 
     var nuGetPackSettings = new NuGetPackSettings
     {   
         Version = version,
-        BasePath = binDir + Directory(configuration),
         OutputDirectory = nugetPackageDir,
         ArgumentCustomization = args => args.Append("-Prop Configuration=" + configuration)
     };
 
-    NuGetPack(nugetFilePaths, nuGetPackSettings);
+    NuGetPack("src/iisexpress.runner.service.nuspec", nuGetPackSettings);
 });
 
 
