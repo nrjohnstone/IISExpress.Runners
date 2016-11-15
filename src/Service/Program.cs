@@ -1,4 +1,5 @@
-﻿using AmbientContext.LogService.Serilog;
+﻿using System;
+using AmbientContext.LogService.Serilog;
 using IISExpress.Host.Service.Settings;
 using Serilog;
 using Topshelf;
@@ -7,7 +8,7 @@ namespace IISExpress.Host.Service
 {
     class Program
     {
-        private AmbientLogService _logger = new AmbientLogService();
+        private static readonly AmbientLogService _logger = new AmbientLogService();
 
         static void Main(string[] args)
         {
@@ -20,15 +21,22 @@ namespace IISExpress.Host.Service
                 x.Service<IISExpressHost>(s =>
                 {
                     s.ConstructUsing(name => new IISExpressHost());
-                    s.WhenStarted(tc => tc.Start());
+                    s.WhenStarted((tc, hostControl) => tc.Start(hostControl));
                     s.WhenStopped(tc => tc.Stop());
                 });
-                x.RunAsLocalSystem();
-
+                x.RunAsLocalService();
+                x.OnException(OnException);
                 x.SetDescription(settings.ServiceDescription);
                 x.SetDisplayName(settings.ServiceDisplayName);
                 x.SetServiceName(settings.ServiceName);
             });
+
+            _logger.Information("IISExpress.Service exiting");
+        }
+
+        private static void OnException(Exception ex)
+        {
+            _logger.Error(ex, "{Exception}");
         }
 
         private static void ConfigureSerilog()
