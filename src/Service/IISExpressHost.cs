@@ -26,7 +26,7 @@ namespace IISExpress.Host.Service
             string port = config.Port;
 
             arguments.Append($"/path:\"{webSitePath}\"");
-            arguments.Append($" /Port:{port} /systray:false xxxx");
+            arguments.Append($" /Port:{port} /systray:false");
 
             _process = Process.Start(new ProcessStartInfo()
             {
@@ -53,6 +53,7 @@ namespace IISExpress.Host.Service
         {
             while (!_shutdownMonitor)
             {
+                Thread.Sleep(500);
                 if (_process.HasExited)
                 {
                     Console.WriteLine("iisexpress has exited");
@@ -61,7 +62,6 @@ namespace IISExpress.Host.Service
                     _logger.Error(msg);
                     _hostControl.Stop();                    
                 }
-                Thread.Sleep(500);
             }
         }
 
