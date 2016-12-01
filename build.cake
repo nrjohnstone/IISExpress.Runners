@@ -47,9 +47,9 @@ Task("Pack-Nuget")
 
     var nuGetPackSettings = new NuGetPackSettings
     {   
-        Version = version,
-        OutputDirectory = nugetPackageDir,
-        ArgumentCustomization = args => args.Append("-Prop Configuration=" + configuration)
+        Version                 = version,
+        OutputDirectory         = nugetPackageDir,
+        ArgumentCustomization   = args => args.Append("-Prop Configuration=" + configuration)
     };
 
     NuGetPack("src/iisexpress.runner.service.nuspec", nuGetPackSettings);
