@@ -56,6 +56,26 @@ Task("Pack-Nuget")
 });
 
 
+Task("Pack-NugetTestPackage")
+    .Does(() => 
+{
+    EnsureDirectoryExists("./test/artifacts");
+    CleanDirectories("./test/artifacts");
+    string version = GitVersion().NuGetVersion;
+
+    var nugetPackageDir = Directory("./test/artifacts");
+
+    var nuGetPackSettings = new NuGetPackSettings
+    {   
+        Version                 = version,
+        OutputDirectory         = nugetPackageDir,
+        ArgumentCustomization   = args => args.Append("-Prop Configuration=" + configuration)
+    };
+
+    NuGetPack("src/iisexpress.runner.service.nuspec", nuGetPackSettings);
+});
+
+
 Task("Build")
     .IsDependentOn("Restore-NuGet-Packages")
     .IsDependentOn("Update-Version")
@@ -118,6 +138,42 @@ Task("Get-DotNetCli")
         Environment.SetEnvironmentVariable("Path", path);
     }
 });
+
+//////////////////////////////////////////////////////////////////////
+// DEPLOY
+//////////////////////////////////////////////////////////////////////
+
+Task("Test")
+    .IsDependentOn("Build")
+    .IsDependentOn("Deploy-NugetTestPackage")
+    .Does(() => {
+        
+    });
+
+Task("Install-NugetTestPackage")
+    .Does(() => {
+        EnsureDirectoryExists("./test/packages");
+        CleanDirectories("./test/packages");
+
+        NuGetInstallSettings settings = new NuGetInstallSettings() {
+            Source = new [] { "d:/dev/IISExpress.Runners/test/artifacts"},
+            Prerelease = true,
+            OutputDirectory = "./test/packages",
+            ExcludeVersion = true
+        };
+
+        NuGetInstall("iisexpress.runner.service", settings);
+    });
+
+Task("Deploy-NugetTestPackage")
+    .IsDependentOn("Pack-NugetTestPackage")
+    .IsDependentOn("Install-NugetTestPackage")
+    .Does(() => {
+        EnsureDirectoryExists("./test/deploy");
+        CleanDirectories("./test/deploy");
+
+        CopyFiles("./test/packages/iisexpress.runner.service/tools" + @"\*.*" , "./test/deploy");
+    });
 
 //////////////////////////////////////////////////////////////////////
 // TASK TARGETS
