@@ -140,12 +140,16 @@ Task("Get-DotNetCli")
 });
 
 //////////////////////////////////////////////////////////////////////
-// DEPLOY
+// INTEGRATION TEST
 //////////////////////////////////////////////////////////////////////
-
+var testDeployDir = Directory("./test/deploy");
+var testPackageDir = Directory("./test/packages");
+var testWebAppDir = Directory("./src/TestWebApp");
+        
 Task("Test")
     .IsDependentOn("Build")
     .IsDependentOn("Deploy-NugetTestPackage")
+    .IsDependentOn("Update-TestConfiguration")
     .Does(() => {
         
     });
@@ -168,11 +172,28 @@ Task("Install-NugetTestPackage")
 Task("Deploy-NugetTestPackage")
     .IsDependentOn("Pack-NugetTestPackage")
     .IsDependentOn("Install-NugetTestPackage")
-    .Does(() => {
-        EnsureDirectoryExists("./test/deploy");
-        CleanDirectories("./test/deploy");
+    .Does(() => {        
+        EnsureDirectoryExists(testDeployDir);
+        CleanDirectories(testDeployDir);
+        
+        CopyDirectory((testPackageDir + Directory("iisexpress.runner.service/tools")), testDeployDir);
+        CopyDirectory(testWebAppDir + Directory("bin"), testDeployDir + Directory("bin"));
 
-        CopyFiles("./test/packages/iisexpress.runner.service/tools" + @"\*.*" , "./test/deploy");
+        CopyFileToDirectory(testWebAppDir + File("Global.asax"), testDeployDir);
+        CopyFileToDirectory(testWebAppDir + File("Web.config"), testDeployDir);
+    });
+
+Task("Update-TestConfiguration")
+    .Does(()=> { 
+        var iisExpressRunnerConfig = "./test/deploy" + "/IISExpressService.exe.config";
+        var webServiceDeployDir = MakeAbsolute(Directory("./test/deploy"));
+        var webServicePort = "2000";
+        var webServiceDeployDirSlashes = webServiceDeployDir.ToString().Replace("/", @"\");
+
+        XmlPoke(iisExpressRunnerConfig, 
+            "/configuration/appSettings/add[@key = 'WebSitePath']/@value", webServiceDeployDirSlashes);
+        XmlPoke(iisExpressRunnerConfig, 
+            "/configuration/appSettings/add[@key = 'Port']/@value", webServicePort);
     });
 
 //////////////////////////////////////////////////////////////////////
