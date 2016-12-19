@@ -14,11 +14,13 @@ namespace IISExpress.Host.Service.Settings
             return ConfigurationManager.AppSettings.Get(key);
         }
 
+
         public string IISPath => GetValue("IISPath");
         public string WebSitePath => GetValue("WebSitePath");
         public string Port => GetValue("Port");
         public string ServiceDescription => GetValue("ServiceDescription");
         public string ServiceDisplayName => GetValue("ServiceDisplayName");
         public string ServiceName => GetValue("ServiceName");
+        public bool RunAsLocalService => Convert.ToBoolean(GetValue("RunAsLocalService"));
     }
 }

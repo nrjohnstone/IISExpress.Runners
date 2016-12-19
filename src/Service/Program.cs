@@ -24,7 +24,10 @@ namespace IISExpress.Host.Service
                     s.WhenStarted((tc, hostControl) => tc.Start(hostControl));
                     s.WhenStopped(tc => tc.Stop());
                 });
-                x.RunAsLocalService();
+
+                if (settings.RunAsLocalService)
+                    x.RunAsLocalService();
+
                 x.OnException(OnException);
                 x.SetDescription(settings.ServiceDescription);
                 x.SetDisplayName(settings.ServiceDisplayName);
