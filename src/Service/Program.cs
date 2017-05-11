@@ -13,7 +13,7 @@ namespace IISExpress.Host.Service
         static void Main(string[] args)
         {
             ConfigureSerilog();
-
+            _logger.Information("[Main] IISExpress.Service starting");
             var settings = new SettingsFromAppConfig();
 
             HostFactory.Run(x =>

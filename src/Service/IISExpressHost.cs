@@ -8,7 +8,7 @@ using Topshelf;
 
 namespace IISExpress.Host.Service
 {
-    internal class IISExpressHost
+    internal class IISExpressHost : IDisposable
     {
         private Process _process;
         private Thread _iisMonitor;
@@ -27,7 +27,7 @@ namespace IISExpress.Host.Service
 
             arguments.Append($"/path:\"{webSitePath}\"");
             arguments.Append($" /Port:{port} /systray:false");
-
+ 
             _process = Process.Start(new ProcessStartInfo()
             {
                 FileName = iisExpress,
@@ -38,6 +38,8 @@ namespace IISExpress.Host.Service
                 UseShellExecute = false,
                 CreateNoWindow = true,
             });
+
+            _logger.Information($"[Start] IISExpress started with pid: {_process.Id}");
 
             _iisMonitor = new Thread(MonitorIISExpress) {Name = "IISMonitor"};
             _iisMonitor.Start();
@@ -53,11 +55,10 @@ namespace IISExpress.Host.Service
         {
             while (!_shutdownMonitor)
             {
-                Thread.Sleep(500);
+                Thread.Sleep(250);
                 if (_process.HasExited)
                 {
-                    Console.WriteLine("iisexpress has exited");
-                    string msg = "iisexpress process has exited";
+                    string msg = "IISExpress process has exited";
                     
                     _logger.Error(msg);
                     _hostControl.Stop();                    
@@ -67,13 +68,17 @@ namespace IISExpress.Host.Service
 
         public void Stop()
         {
+            _logger.Information("[Stop] Enter");
             try
             {
                 _shutdownMonitor = true;
                 _iisMonitor.Join(TimeSpan.FromSeconds(5));
 
                 if (!_process.HasExited)
+                {
+                    _logger.Debug("[Stop] Killing IISExpress");
                     _process.Kill();
+                }                    
             }
             catch (Exception)
             {
@@ -82,5 +87,12 @@ namespace IISExpress.Host.Service
 
         private bool _shutdownMonitor = false;
         private HostControl _hostControl;
+
+        public void Dispose()
+        {
+            _logger.Debug("[Dispose] Waiting for IISExpress to exit");
+            _process.WaitForExit(5000);
+            _process?.Dispose();
+        }
     }
 }
