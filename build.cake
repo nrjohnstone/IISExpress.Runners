@@ -56,26 +56,6 @@ Task("Pack-Nuget")
 });
 
 
-Task("Pack-NugetTestPackage")
-    .Does(() => 
-{
-    EnsureDirectoryExists("./test/artifacts");
-    CleanDirectories("./test/artifacts");
-    string version = GitVersion().NuGetVersion;
-
-    var nugetPackageDir = Directory("./test/artifacts");
-
-    var nuGetPackSettings = new NuGetPackSettings
-    {   
-        Version                 = version,
-        OutputDirectory         = nugetPackageDir,
-        ArgumentCustomization   = args => args.Append("-Prop Configuration=" + configuration)
-    };
-
-    NuGetPack("src/iisexpress.runner.service.nuspec", nuGetPackSettings);
-});
-
-
 Task("Build")
     .IsDependentOn("Restore-NuGet-Packages")
     .IsDependentOn("Update-Version")
@@ -148,46 +128,52 @@ var testWebAppDir = Directory("./src/TestWebApp");
         
 Task("Test")
     .IsDependentOn("Build")
-    .IsDependentOn("Deploy-NugetTestPackage")
-    .IsDependentOn("Update-TestConfiguration")
+    .IsDependentOn("Pack-Nuget")
+    .IsDependentOn("Test-InstallNugetPackage")
+    .IsDependentOn("Test-Deploy")
+    .IsDependentOn("Test-UpdateConfiguration")
     .Does(() => {
         
     });
 
-Task("Install-NugetTestPackage")
+
+Task("Test-InstallNugetPackage")
     .Does(() => {
         EnsureDirectoryExists("./test/packages");
         CleanDirectories("./test/packages");
+        
+        var artifacts = Directory("./artifacts");
 
         NuGetInstallSettings settings = new NuGetInstallSettings() {
-            Source = new [] { "d:/dev/IISExpress.Runners/test/artifacts"},
+            Source = new [] { artifacts.Path.MakeAbsolute(Context.Environment).FullPath },
             Prerelease = true,
             OutputDirectory = "./test/packages",
-            ExcludeVersion = true
+            ExcludeVersion = true,
+            Version = GitVersion().NuGetVersion          
         };
 
         NuGetInstall("iisexpress.runner.service", settings);
     });
 
-Task("Deploy-NugetTestPackage")
-    .IsDependentOn("Pack-NugetTestPackage")
-    .IsDependentOn("Install-NugetTestPackage")
-    .Does(() => {        
-        EnsureDirectoryExists(testDeployDir);
-        CleanDirectories(testDeployDir);
-        
-        CopyDirectory((testPackageDir + Directory("iisexpress.runner.service/tools")), testDeployDir);
-        CopyDirectory(testWebAppDir + Directory("bin"), testDeployDir + Directory("bin"));
 
-        CopyFileToDirectory(testWebAppDir + File("Global.asax"), testDeployDir);
-        CopyFileToDirectory(testWebAppDir + File("Web.config"), testDeployDir);
+Task("Test-Deploy")
+    .Does(() => {
+        EnsureDirectoryExists("./test/deploy");
+        CleanDirectories("./test/deploy");        
+
+        CopyDirectory(testWebAppDir + Directory("bin"), "./test/deploy/webapp");
+        CopyFile(testWebAppDir + File("web.config"), "./test/deploy/web.config");
+        CopyFile(testWebAppDir + File("global.asax"), "./test/deploy/global.asax");
+        
+        CopyDirectory("./test/packages/iisexpress.runner.service/tools", "./test/deploy/");
     });
 
-Task("Update-TestConfiguration")
+
+Task("Test-UpdateConfiguration")
     .Does(()=> { 
-        var iisExpressRunnerConfig = "./test/deploy" + "/IISExpressService.exe.config";
+        var iisExpressRunnerConfig = Directory(testDeployDir) + File("IISExpressService.exe.config");
         var webServiceDeployDir = MakeAbsolute(Directory("./test/deploy"));
-        var webServicePort = "2000";
+        var webServicePort = "20000";
         var webServiceDeployDirSlashes = webServiceDeployDir.ToString().Replace("/", @"\");
 
         XmlPoke(iisExpressRunnerConfig, 
@@ -195,6 +181,7 @@ Task("Update-TestConfiguration")
         XmlPoke(iisExpressRunnerConfig, 
             "/configuration/appSettings/add[@key = 'Port']/@value", webServicePort);
     });
+
 
 //////////////////////////////////////////////////////////////////////
 // TASK TARGETS
