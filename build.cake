@@ -1,6 +1,8 @@
-#addin "Newtonsoft.Json"
+#addin "Newtonsoft.Json&version=10.0.3"
 #addin "Cake.Powershell"
 #tool "nuget:?package=GitVersion.CommandLine"
+#tool "nuget:?package=nuget.commandline&version=4.4.1"
+#addin "Cake.Http"
 //////////////////////////////////////////////////////////////////////
 // ARGUMENTS
 //////////////////////////////////////////////////////////////////////
@@ -69,9 +71,7 @@ Task("Build")
 Task("Rebuild")
     .IsDependentOn("Clean")
     .IsDependentOn("Restore-NuGet-Packages")
-    .IsDependentOn("Build")
-    .Does(() =>
-{ });
+    .IsDependentOn("Build");
 
 
 Task("Update-Version")
@@ -96,29 +96,6 @@ Task("Update-Version")
 });
 
 
-Task("Get-DotNetCli")
-    .Does(() =>
-{         
-    string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-    string dotNetPath = userProfile + @"Local\Microsoft\dotnet";
-    
-    if (!Environment.GetEnvironmentVariable("Path", EnvironmentVariableTarget.Machine).Contains(dotNetPath))
-    {
-        DownloadFile("https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1", "./tools/dotnet-install.ps1");
-        var version = "1.0.0-preview2-003121";
-        StartPowershellFile("./tools/dotnet-install.ps1", args =>
-            {
-                args.Append("Version", version);
-            });
-
-        
-        string path = Environment.GetEnvironmentVariable("Path", EnvironmentVariableTarget.Machine) + ";" + dotNetPath;
-        Console.WriteLine(path);
-        Environment.SetEnvironmentVariable("Path", path, EnvironmentVariableTarget.Machine);
-        Environment.SetEnvironmentVariable("Path", path);
-    }
-});
-
 //////////////////////////////////////////////////////////////////////
 // INTEGRATION TEST
 //////////////////////////////////////////////////////////////////////
@@ -130,11 +107,9 @@ Task("Test")
     .IsDependentOn("Build")
     .IsDependentOn("Pack-Nuget")
     .IsDependentOn("Test-InstallNugetPackage")
-    .IsDependentOn("Test-Deploy")
-    .IsDependentOn("Test-UpdateConfiguration")
-    .Does(() => {
-        
-    });
+    .IsDependentOn("Test-Deploy-WebAppGlobalAsax")
+    .IsDependentOn("Test-UpdateConfiguration-WebAppGlobalAsax")
+    .IsDependentOn("Test-HealthCheck-WebAppGlobalAsax");
 
 
 Task("Test-InstallNugetPackage")
@@ -156,23 +131,24 @@ Task("Test-InstallNugetPackage")
     });
 
 
-Task("Test-Deploy")
+Task("Test-Deploy-WebAppGlobalAsax")
     .Does(() => {
-        EnsureDirectoryExists("./test/deploy");
-        CleanDirectories("./test/deploy");        
-
-        CopyDirectory(testWebAppDir + Directory("bin"), "./test/deploy/webapp");
-        CopyFile(testWebAppDir + File("web.config"), "./test/deploy/web.config");
-        CopyFile(testWebAppDir + File("global.asax"), "./test/deploy/global.asax");
+        EnsureDirectoryExists("./test/deploy/globalasax");
+        EnsureDirectoryExists("./test/deploy/globalasax");
+        CleanDirectories("./test/deploy/globalasax");
         
-        CopyDirectory("./test/packages/iisexpress.runner.service/tools", "./test/deploy/");
+        CopyDirectory(testWebAppDir + Directory("bin"), "./test/deploy/globalasax/bin");
+        CopyFile(testWebAppDir + File("web.config"), "./test/deploy/globalasax/web.config");
+        CopyFile(testWebAppDir + File("global.asax"), "./test/deploy/globalasax/global.asax");
+        
+        CopyDirectory("./test/packages/iisexpress.runner.service/tools", "./test/deploy/globalasax/");
     });
 
 
-Task("Test-UpdateConfiguration")
+Task("Test-UpdateConfiguration-WebAppGlobalAsax")
     .Does(()=> { 
-        var iisExpressRunnerConfig = Directory(testDeployDir) + File("IISExpressService.exe.config");
-        var webServiceDeployDir = MakeAbsolute(Directory("./test/deploy"));
+        var iisExpressRunnerConfig = Directory(testDeployDir) + Directory("globalasax") + File("IISExpressService.exe.config");
+        var webServiceDeployDir = MakeAbsolute(Directory("./test/deploy/globalasax"));
         var webServicePort = "20000";
         var webServiceDeployDirSlashes = webServiceDeployDir.ToString().Replace("/", @"\");
 
@@ -182,6 +158,51 @@ Task("Test-UpdateConfiguration")
             "/configuration/appSettings/add[@key = 'Port']/@value", webServicePort);
     });
 
+
+Task("Test-HealthCheck-WebAppGlobalAsax")
+    .Does(() => {
+        var iisExpressRunnerExe = Directory(testDeployDir) + Directory("globalasax") + File("IISExpressService.exe");
+
+        using(var process = StartAndReturnProcess(iisExpressRunnerExe))
+        {
+            var settings = new HttpSettings { EnsureSuccessStatusCode = true };    
+
+            ExecuteWithRetry(3, () => {
+                HttpGet("http://localhost:20000/api/health", settings);
+            });        
+
+            process.Kill();
+            process.WaitForExit();
+            // This should output 0 as valid arguments supplied
+            //Information("Exit code: {0}", process.GetExitCode());
+        };
+
+                        
+})
+.ReportError(exception =>
+{
+    Error($"Unable to reach health endpoint api/health");
+});
+
+Action<int, Action> ExecuteWithRetry = (retryMax, action) => { 
+    bool successful = false;
+    int retry = 0;
+       
+    do
+    {            
+        try {
+            action();
+            successful = true;
+        }
+        catch (Exception) {
+            retry++;            
+            Information("Retrying");
+            if (retry > retryMax)
+                throw;
+            System.Threading.Thread.Sleep(2000);
+        }
+    } while (!successful);        
+};
 
 //////////////////////////////////////////////////////////////////////
 // TASK TARGETS

@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading;
 using AmbientContext.LogService.Serilog;
@@ -20,14 +21,14 @@ namespace IISExpress.Host.Service
             var config = new SettingsFromAppConfig();
 
             string iisExpress = config.IISPath;
-            
+
             StringBuilder arguments = new StringBuilder();
             string webSitePath = config.WebSitePath;
             string port = config.Port;
 
             arguments.Append($"/path:\"{webSitePath}\"");
             arguments.Append($" /Port:{port} /systray:false");
- 
+
             _process = Process.Start(new ProcessStartInfo()
             {
                 FileName = iisExpress,
@@ -43,14 +44,14 @@ namespace IISExpress.Host.Service
 
             _iisMonitor = new Thread(MonitorIISExpress) {Name = "IISMonitor"};
             _iisMonitor.Start();
-            
+
             // Close stdout for Swagger to work properly
             _process.StandardOutput.Close();
-            
+
             return true;
         }
 
-        
+
         private void MonitorIISExpress()
         {
             while (!_shutdownMonitor)
@@ -59,9 +60,9 @@ namespace IISExpress.Host.Service
                 if (_process.HasExited)
                 {
                     string msg = "IISExpress process has exited";
-                    
+
                     _logger.Error(msg);
-                    _hostControl.Stop();                    
+                    _hostControl.Stop();
                 }
             }
         }
@@ -78,7 +79,7 @@ namespace IISExpress.Host.Service
                 {
                     _logger.Debug("[Stop] Killing IISExpress");
                     _process.Kill();
-                }                    
+                }
             }
             catch (Exception)
             {
