@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -34,4 +34,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyVersion("0.2.0.0")]
 [assembly: AssemblyFileVersion("0.2.0.0")]
 
-[assembly: AssemblyInformationalVersion("0.2.0-unstable.14+Branch.develop.Sha.e9e3d293162ee0cff89d1437c9e813c2bb281ab2")]
+[assembly: AssemblyInformationalVersion("0.2.0-alpha.15+Branch.develop.Sha.f8a253d7c5f675e70d1ccd02cb6d6e015bd466fc")]
