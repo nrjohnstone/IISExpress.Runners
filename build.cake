@@ -1,8 +1,8 @@
 #addin "Newtonsoft.Json&version=10.0.3"
-#addin "Cake.Powershell"
-#tool "nuget:?package=GitVersion.CommandLine"
+#addin "Cake.Powershell&version=0.4.7"
+#tool "nuget:?package=GitVersion.CommandLine&version=4.0.0"
 #tool "nuget:?package=nuget.commandline&version=4.4.1"
-#addin "Cake.Http"
+#addin "Cake.Http&version=0.5.0"
 //////////////////////////////////////////////////////////////////////
 // ARGUMENTS
 //////////////////////////////////////////////////////////////////////
@@ -175,9 +175,7 @@ Task("Test-HealthCheck-WebAppGlobalAsax")
             process.WaitForExit();
             // This should output 0 as valid arguments supplied
             //Information("Exit code: {0}", process.GetExitCode());
-        };
-
-                        
+        };                        
 })
 .ReportError(exception =>
 {
